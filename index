@@ -1,0 +1,85 @@
+#!/usr/bin/env node
+'use strict'
+
+const Promise = require( 'bluebird' )
+const cmd     = require( 'commander' )
+const moment  = require( 'moment' )
+const fs      = require( 'fs' )
+
+const talk    = require( './talk' )
+const get     = require( './getVersionAtDate' )
+
+const manifestify = releases =>
+  releases.reduce(
+    ( buffer, release ) => {
+      if( release )
+        buffer[ release.name ] = release.version
+
+      return buffer
+    },
+    {}
+  )
+
+cmd
+  .usage( '[packages...]' )
+  .description(
+    `Determine the latest available version of npm packages at a given point in time`
+  )
+  .option( '-d, --date [date]', `the date at which the packages should be versioned (defaults to the present moment)`, moment() )
+  .parse( process.argv )
+
+if( !moment( cmd.date ).isValid() )
+  talk.complain `Couldn't parse the supplied date. Make sure it's in a valid ISO_8601 format (or just omit the option)`
+
+if( cmd.args && cmd.args.length )
+  Promise.all(
+    cmd.args.map( name =>
+      get( name, moment( cmd.date ) )
+    )
+  )
+    .then( manifestify )
+    .then( x => JSON.stringify( x, undefined, 2 ) )
+    .then( process.stdout.write )
+
+else {
+  talk.observe `No packages specified, reading from package.json...`
+
+  const pkg = Object.create( null )
+
+  try {
+    Object.assign( pkg,
+      JSON.parse( fs.readFileSync( './package.json', 'utf8' ) )
+    )
+  }
+  catch( e ){
+    talk.complain `Couldn't read from a package.json in the current directory`
+  }
+
+  [
+    'dependencies',
+    'devDependencies',
+    'peerDependencies'
+  ].reduce(
+    ( manifest, category ) => {
+      if( category in pkg )
+        manifest.push(
+          new Promise( ( ok, no ) => {
+            const dependencies = []
+
+            for( const dependency in pkg[ category ] )
+              dependencies.push(
+                get( dependency, moment( cmd.date ) )
+              )
+
+            return Promise
+              .all( dependencies )
+              .then( manifestify )
+          } )
+        )
+
+      return {} manifest, category ]
+    },
+    []
+  )
+}
+
