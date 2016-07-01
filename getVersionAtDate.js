@@ -1,13 +1,18 @@
 'use strict'
 
-const Promise = require( 'bluebird' )
-const moment  = require( 'moment' )
-const exec    = Promise.promisify(
-  require( 'child_process' ).exec
-)
 const Spinner = require( 'cli-spinner' ).Spinner
+const moment  = require( 'moment' )
+const exec    = function(){
+  return new Promise( ( ok, no ) =>
+    require( 'child_process' ).exec(
+      [].concat.call( arguments, ( e, stdout, stderr ) =>
+        e ? no( e ) : sterr ? no( stderr ) : ok( stout )
+      )
+    )
+  )
+}
 
-module.exports = ( name, time ) =>
+module.exports = curry( ( time, version ) =>
   new Promise( ( ok, no ) => {
     const progress = new Spinner()
 
@@ -41,7 +46,7 @@ module.exports = ( name, time ) =>
       } )
       .catch( error =>
         no(
-            `Failed to query npm for history of ${ name }, citing:\n\n`
+            `Couldn't get history of ${ name } from npm:\n\n`
           + error
         )
       )
@@ -49,3 +54,4 @@ module.exports = ( name, time ) =>
         progress.stop( true )
       )
   } )
+)

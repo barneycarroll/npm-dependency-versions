@@ -11,7 +11,7 @@ function stringify(){
 }
 
 module.exports = {
+  announce (){ console.log( chalk.dim(   stringify.apply( this, arguments ) ) ) },
   complain (){ console.log( chalk.red(   stringify.apply( this, arguments ) ) ) },
-  observe  (){ console.log( chalk.dim(   stringify.apply( this, arguments ) ) ) },
   rejoice  (){ console.log( chalk.green( stringify.apply( this, arguments ) ) ) }
 }
