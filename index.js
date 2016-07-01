@@ -1,68 +1,91 @@
-#!/usr/bin/env node
-'use strict'
+const moment     = require( 'moment' )
+const fs         = require( 'fs' )
 
-const Promise = require( 'bluebird' )
-const cmd     = require( 'commander' )
-const moment  = require( 'moment' )
-const fs      = require( 'fs' )
+const talk       = require( './talk' )
+const transform  = require( './transform' )
+const resolveAll = require( './resolveAll' )
+const getAtDate  = require( './getVersionAtDate' )
 
-const get     = require( './getVersionAtDate' )
+const manifestify = releases =>
+  releases.reduce(
+    ( buffer, release ) => {
+      if( release )
+        buffer[ release.name ] = release.version
 
-cmd
-  .arguments( '[packages...]' )
-  .option( '--date [date]', 'The date at which the packages should be versioned' )
-  .parse( process.argv )
+      return buffer
+    },
+    {}
+  )
 
-if( cmd.date ){
-  if( !moment( cmd.date ).isValid() )
-    throw new Error( 'Couldn\'t parse the supplied date. Make sure it\'s in a valid ISO_8601 format (or just omit the option)' )
-}
-else
-  throw new Error( 'You must supply a --date in an ISO_8601 (eg 2016-06-29 or 2016-06-29T12:16:22Z)' )
+module.exports = cmd => {
+  if( !moment( cmd.date ).isValid() ){
+    talk.complain `Couldn't parse the supplied date. Make sure it's in a valid ISO_8601 format (or just omit the option)`
 
-if( !cmd.args || !cmd.args.length ){
-  console.log( 'No packages specified, reading from package.json...' )
+    process.exit( 1 )
+  }
 
-  const pkg = Object.create( null )
+  const getVersion = pkg =>
+    getAtDate( moment( cmd.date ), pkg )
 
-  try {
-    Object.assign( pkg,
-      JSON.parse( fs.readFileSync( './package.json', 'utf8' ) )
+  if( cmd.args && cmd.args.length )
+    Promise.all(
+      cmd.args.map( getVersion )
     )
-  }
-  catch( e ){
-    throw new Error( 'Couldn\'t read from a package.json in the current directory', e )
-  }
+      .then( manifestify )
+      .then( x => JSON.stringify( x, undefined, 2 ) )
+      .then( process.stdout.write )
 
-  [ 'dependencies', 'devDependencies', 'peerDependencies' ].reduce( category => {
+  else {
+    talk.announce `No packages specified, reading from package.json...`
 
-  } )
-}
-else
-  Promise
-    .all(
-      cmd.args.map( name =>
-        get( name, moment( cmd.date ) )
-          .then( version => ( {
-            name,
-            version
-          } ) )
+    const pkg = Object.create( null )
+
+    try {
+      Object.assign( pkg,
+        JSON.parse( fs.readFileSync( './package.json', 'utf8' ) )
       )
-    )
-    .then( releases =>
-      process.stdout.write(
-        JSON.stringify(
-          releases.reduce(
-            ( buffer, release ) => {
-              buffer[ release.name ] = release.version
+    }
+    catch( e ){
+      talk.complain `Couldn't read from a package.json in the current directory`
 
-              return buffer
-            },
-            {}
-          ),
-          undefined,
-          2
+      process.exit( 1 )
+    }
+
+    talk.announce `Building historical dependency graph`
+
+    const graph = [
+      'dependencies',
+      'devDependencies',
+      'peerDependencies'
+    ]
+      .filter( key => key in pkg )
+      .map( key => [
+        key,
+        transform.toList( pkg[ key ] )
+      ] )
+      .map( pair => [
+        pair[ 0 ],
+        pair[ 1 ].map( entry => entry[ 0 ] )
+      ] )
+
+    Promise.all(
+      graph.map( dependencies => {
+        const key  = dependencies[ 0 ]
+        const list = dependencies[ 1 ]
+
+        return resolveAll(
+          list.map( getVersion )
         )
-      )
+          .then( outcomes => [
+            key,
+            manifestify( outcomes[ 1 ] )
+          ] )
+      } )
     )
-
+      .then( categories =>
+        transform.toObject( categories )
+      )
+      .then( x => JSON.stringify( x, undefined, 2 ) )
+      .then( process.stdout.write )
+  }
+}
