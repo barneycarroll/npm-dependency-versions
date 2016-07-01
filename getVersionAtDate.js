@@ -2,6 +2,7 @@
 
 const Spinner = require( 'cli-spinner' ).Spinner
 const moment  = require( 'moment' )
+
 const exec    = function(){
   return new Promise( ( ok, no ) =>
     require( 'child_process' ).exec(
@@ -11,10 +12,13 @@ const exec    = function(){
     )
   )
 }
+const talk    = require( './talk' )
 
-module.exports = curry( ( time, version ) =>
+module.exports = ( time, name ) =>
   new Promise( ( ok, no ) => {
     const progress = new Spinner()
+
+    talk.announce `Querying npm's release history for ${ name }...\n`
 
     progress.start()
 
@@ -54,4 +58,3 @@ module.exports = curry( ( time, version ) =>
         progress.stop( true )
       )
   } )
-)
