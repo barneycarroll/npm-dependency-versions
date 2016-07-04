@@ -1,3 +1,5 @@
+'use strict'
+
 module.exports = promises =>
   new Promise( ( ok, no ) => {
     const successes  = []

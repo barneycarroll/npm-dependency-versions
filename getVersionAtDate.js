@@ -3,6 +3,7 @@
 const Spinner = require( 'cli-spinner' ).Spinner
 const moment  = require( 'moment' )
 
+const talk    = require( './talk' )
 const exec    = function(){
   return new Promise( ( ok, no ) =>
     require( 'child_process' ).exec(
@@ -12,18 +13,14 @@ const exec    = function(){
     )
   )
 }
-const talk    = require( './talk' )
 
-module.exports = ( time, name ) =>
-  new Promise( ( ok, no ) => {
-    const progress = new Spinner()
-
-    talk.announce `Querying npm's release history for ${ name }...\n`
-
-    progress.start()
-
-    exec( 'npm view --json ' + name )
+module.exports = ( time, name ) => {
+  const outcome = new Promise( ( ok, no ) => {
+    const query = exec( 'npm view --json ' + name )
       .then( output => {
+        console.log( '+Got output:' )
+        console.log( output )
+
         const pkg      = JSON.parse( output )
 
         const releases = pkg.versions.map( version => ( {
@@ -48,13 +45,33 @@ module.exports = ( time, name ) =>
             } )
         }
       } )
-      .catch( error =>
-        no(
-            `Couldn't get history of ${ name } from npm:\n\n`
-          + error
-        )
+
+    query.catch( error => {
+      console.log( '+NPM error:' )
+      console.log( error )
+
+      no(
+          `Couldn't get history of ${ name } from npm:\n\n`
+        + error
       )
-      .finally( () =>
-        progress.stop( true )
-      )
+    } )
+
+    return query
   } )
+
+  talk.announce `Querying npm's release history for ${ name }...\n`
+
+  const progress = new Spinner()
+
+  progress.start()
+
+  outcome.catch( () =>
+    progress.stop( true )
+  )
+
+  outcome.then( () =>
+    progress.stop( true )
+  )
+
+  return outcome
+}

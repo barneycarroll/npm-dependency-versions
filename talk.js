@@ -1,3 +1,5 @@
+'use strict'
+
 const chalk = require( 'chalk' )
 
 // Tag function: consumes template literal, outputs a string
