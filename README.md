@@ -14,11 +14,8 @@ Determine the latest available version of npm packages at a given point in time.
 
 | Options: | |
 |---|---|
-|`-h, --help`
-| output usage information
-|
-|`-d, --date [date]
-| the date at which the packages should be versioned (defaults to the present moment)
+| `-h, --help` | output usage information |
+| `-d, --date [date] | the date at which the packages should be versioned (defaults to the present moment) |
 
 ## Eg
 

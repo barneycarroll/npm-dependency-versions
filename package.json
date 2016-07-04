@@ -1,6 +1,6 @@
 {
   "name": "npm-dependency-versions",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "A utility for determining the package versions at given points in time",
   "main": "index.js",
   "bin": {
