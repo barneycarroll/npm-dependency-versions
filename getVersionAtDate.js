@@ -1,18 +1,13 @@
 'use strict'
 
+const Promise = require( 'bluebird' )
 const Spinner = require( 'cli-spinner' ).Spinner
 const moment  = require( 'moment' )
 
 const talk    = require( './talk' )
-const exec    = function(){
-  return new Promise( ( ok, no ) =>
-    require( 'child_process' ).exec(
-      [].concat.call( arguments, ( e, stdout, stderr ) =>
-        e ? no( e ) : sterr ? no( stderr ) : ok( stout )
-      )
-    )
-  )
-}
+const exec    = Promise.promisify(
+  require( 'child_process' ).exec
+)
 
 module.exports = ( time, name ) => {
   const outcome = new Promise( ( ok, no ) => {
@@ -63,13 +58,7 @@ module.exports = ( time, name ) => {
 
   const progress = new Spinner()
 
-  progress.start()
-
-  outcome.catch( () =>
-    progress.stop( true )
-  )
-
-  outcome.then( () =>
+  outcome.finally( () =>
     progress.stop( true )
   )
 

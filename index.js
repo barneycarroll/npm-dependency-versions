@@ -1,3 +1,5 @@
+'use strict'
+
 const moment     = require( 'moment' )
 const fs         = require( 'fs' )
 
@@ -31,7 +33,7 @@ module.exports = function dependencyVersions( options ){
     getAtDate( moment( date ), pkg )
 
   if( args && args.length )
-    Promise.all(
+    return Promise.all(
       args.map( getVersion )
     )
       .then( manifestify )
@@ -71,7 +73,7 @@ module.exports = function dependencyVersions( options ){
         pair[ 1 ].map( entry => entry[ 0 ] )
       ] )
 
-    Promise.all(
+    return Promise.all(
       graph.map( dependencies => {
         const key  = dependencies[ 0 ]
         const list = dependencies[ 1 ]
