@@ -17,19 +17,22 @@ const manifestify = releases =>
     {}
   )
 
-module.exports = cmd => {
-  if( !moment( cmd.date ).isValid() ){
+module.exports = function dependencyVersions( options ){
+  const date = options.date
+  const args = options.args
+
+  if( !moment( date ).isValid() ){
     talk.complain `Couldn't parse the supplied date. Make sure it's in a valid ISO_8601 format (or just omit the option)`
 
     process.exit( 1 )
   }
 
   const getVersion = pkg =>
-    getAtDate( moment( cmd.date ), pkg )
+    getAtDate( moment( date ), pkg )
 
-  if( cmd.args && cmd.args.length )
+  if( args && args.length )
     Promise.all(
-      cmd.args.map( getVersion )
+      args.map( getVersion )
     )
       .then( manifestify )
       .then( x => JSON.stringify( x, undefined, 2 ) )
