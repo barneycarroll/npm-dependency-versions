@@ -1,8 +1,10 @@
 #!/usr/bin/env node
 'use strict'
 
-const cmd   = require( 'commander' )
-const api   = require( './index.js' )
+const Promise = require( 'bluebird' )
+const write   = Promise.promisify( require( 'fs' ).writeFile )
+const cmd     = require( 'commander' )
+const api     = require( './index.js' )
 
 const input = cmd
   .usage( '[packages...]' )
@@ -15,9 +17,23 @@ const input = cmd
     '-d, --date [date]',
     `the date at which the packages should be versioned (defaults to the present moment)`
   )
+  .option(
+    '-o, --output [filename]',
+    `file to write the output to (defaults to stdout)`
+  )
   .parse( process.argv )
 
 api( {
   pkgs : input.args,
   date : input.date
 } )
+  .then( output => {
+    if( input.output ){
+      process.stdout.write( `Writing output to ` + input.output )
+      write( input.output, output )
+    }
+    else {
+      process.stdout.write( output )
+    }
+  } )
+  .catch(  )
