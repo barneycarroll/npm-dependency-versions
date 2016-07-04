@@ -1,19 +1,10 @@
 'use strict'
 
 const chalk = require( 'chalk' )
-
-// Tag function: consumes template literal, outputs a string
-function stringify(){
-  const strings = arguments[ 0 ].slice( 1 )
-
-  return [].slice.call( arguments, 1 ).reduce( ( buffer, value, index ) =>
-    buffer + value + strings[ index ],
-    arguments[ 0 ][ 0 ]
-  )
-}
+const untag = require( './untag' )
 
 module.exports = {
-  announce (){ console.log( chalk.dim(   stringify.apply( this, arguments ) ) ) },
-  complain (){ console.log( chalk.red(   stringify.apply( this, arguments ) ) ) },
-  rejoice  (){ console.log( chalk.green( stringify.apply( this, arguments ) ) ) }
+  announce (){ console.log( chalk.dim(   untag.apply( this, arguments ) ) ) },
+  complain (){ console.log( chalk.red(   untag.apply( this, arguments ) ) ) },
+  rejoice  (){ console.log( chalk.green( untag.apply( this, arguments ) ) ) }
 }

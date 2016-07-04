@@ -13,9 +13,6 @@ module.exports = ( time, name ) => {
   const outcome = new Promise( ( ok, no ) => {
     const query = exec( 'npm view --json ' + name )
       .then( output => {
-        console.log( '+Got output:' )
-        console.log( output )
-
         const pkg      = JSON.parse( output )
 
         const releases = pkg.versions.map( version => ( {
@@ -24,7 +21,7 @@ module.exports = ( time, name ) => {
         } ) )
 
         if( moment( releases[ 0 ].time ) > time )
-          return no(
+          no(
               `${ name } was not yet available on npm at ${ time }.\n`
             + `The earliest published version was ${ releases[ 0 ].version }, at ${ releases[ 0 ].time }`
           )
@@ -34,33 +31,34 @@ module.exports = ( time, name ) => {
           const b = releases[ i + 1 ] || { time : moment() + 1 }
 
           if( moment( time ).isBetween( a.time, b.time ) )
-            return ok( {
-              name,
-              version : a.version
-            } )
+            return ok( [ name, a.version ] )
         }
       } )
 
     query.catch( error => {
-      console.log( '+NPM error:' )
-      console.log( error )
-
       no(
-          `Couldn't get history of ${ name } from npm:\n\n`
+          `Couldn't get history of ${ name } from npm:\n`
         + error
+        + `\n\n`
       )
     } )
 
     return query
   } )
 
-  talk.announce `Querying npm's release history for ${ name }...\n`
+  {
+    const progress = new Spinner()
 
-  const progress = new Spinner()
+    talk.announce `Querying npm's release history for ${ name }...`
 
-  outcome.finally( () =>
-    progress.stop( true )
-  )
+    progress.start()
+
+    outcome.catch( talk.complain )
+
+    outcome.finally( () =>
+      progress.stop( true )
+    )
+  }
 
   return outcome
 }

@@ -1,0 +1,23 @@
+#!/usr/bin/env node
+'use strict'
+
+const cmd   = require( 'commander' )
+const api   = require( './index.js' )
+
+const input = cmd
+  .usage( '[packages...]' )
+  .description(
+    `Determine the latest available version of npm packages `
+  + `at a given point in time. `
+  + `Parses local package.json if no packages are specified.`
+  )
+  .option(
+    '-d, --date [date]',
+    `the date at which the packages should be versioned (defaults to the present moment)`
+  )
+  .parse( process.argv )
+
+api( {
+  pkgs : input.args,
+  date : input.date
+} )

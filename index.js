@@ -1,27 +1,16 @@
 'use strict'
 
-const moment     = require( 'moment' )
-const fs         = require( 'fs' )
+const moment    = require( 'moment' )
+const fs        = require( 'fs' )
 
-const talk       = require( './talk' )
-const transform  = require( './transform' )
-const resolveAll = require( './resolveAll' )
-const getAtDate  = require( './getVersionAtDate' )
-
-const manifestify = releases =>
-  releases.reduce(
-    ( buffer, release ) => {
-      if( release )
-        buffer[ release.name ] = release.version
-
-      return buffer
-    },
-    {}
-  )
+const talk      = require( './talk' )
+const transform = require( './transform' )
+const settleAll = require( './settleAll' )
+const getAtDate = require( './getVersionAtDate' )
 
 module.exports = function dependencyVersions( options ){
   const date = options.date
-  const args = options.args
+  const pkgs = options.pkgs
 
   if( !moment( date ).isValid() ){
     talk.complain `Couldn't parse the supplied date. Make sure it's in a valid ISO_8601 format (or just omit the option)`
@@ -32,13 +21,17 @@ module.exports = function dependencyVersions( options ){
   const getVersion = pkg =>
     getAtDate( moment( date ), pkg )
 
-  if( args && args.length )
-    return Promise.all(
-      args.map( getVersion )
+  if( pkgs && pkgs.length )
+    return settleAll(
+      pkgs.map( getVersion )
     )
-      .then( manifestify )
-      .then( x => JSON.stringify( x, undefined, 2 ) )
-      .then( process.stdout.write )
+      .then( transform.toObject )
+      .then( manifest =>
+        JSON.stringify( manifest, undefined, 2 )
+      )
+      .then( x =>
+        process.stdout.write( x )
+      )
 
   else {
     talk.announce `No packages specified, reading from package.json...`
@@ -73,24 +66,23 @@ module.exports = function dependencyVersions( options ){
         pair[ 1 ].map( entry => entry[ 0 ] )
       ] )
 
-    return Promise.all(
-      graph.map( dependencies => {
-        const key  = dependencies[ 0 ]
-        const list = dependencies[ 1 ]
-
-        return resolveAll(
-          list.map( getVersion )
+    return settleAll(
+      graph.map( dependencies =>
+        settleAll(
+          dependencies[ 1 ].map( getVersion )
         )
           .then( outcomes => [
-            key,
-            manifestify( outcomes[ 1 ] )
+            dependencies[ 0 ],
+            transform.toObject( outcomes )
           ] )
-      } )
-    )
-      .then( categories =>
-        transform.toObject( categories )
       )
-      .then( x => JSON.stringify( x, undefined, 2 ) )
-      .then( process.stdout.write )
+    )
+      .then( transform.toObject )
+      .then( x =>
+        JSON.stringify( x, undefined, 2 )
+      )
+      .then( x =>
+        process.stdout.write( x )
+      )
   }
 }
