@@ -15,6 +15,8 @@ module.exports = {
     list.reduce(
       ( object, item ) => {
         object[ item[ 0 ] ] = item[ 1 ]
+
+        return object
       },
       {}
     )
