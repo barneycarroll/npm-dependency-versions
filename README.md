@@ -3,7 +3,7 @@
 ## Install
 
 ```sh
-npm i -g depver
+npm i -g npm-dependency-versions
 ```
 
 ## CLI
