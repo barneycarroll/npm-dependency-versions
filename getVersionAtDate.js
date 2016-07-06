@@ -3,15 +3,32 @@
 const Promise = require( 'bluebird' )
 const Spinner = require( 'cli-spinner' ).Spinner
 const moment  = require( 'moment' )
+const semver  = require( 'semver' )
 
 const talk    = require( './talk' )
 const exec    = Promise.promisify(
   require( 'child_process' ).exec
 )
 
-module.exports = ( time, name ) => {
+module.exports = ( time, name, target ) => {
   const outcome = new Promise( ( ok, no ) => {
+    if( target && target !== 'latest' && !semver.validRange( target ) ){
+      talk.announce( `${ name }'s stated version is ${ target } - not something that can be queried via npm`)
+
+      return ok( [ name, target ] )
+    }
+
     const query = exec( 'npm view --json ' + name )
+
+    query.catch( error => {
+      no(
+          `Couldn't get history of ${ name } from npm:\n`
+        + error
+        + `\n\n`
+      )
+    } )
+
+    return query
       .then( output => {
         const pkg      = JSON.parse( output )
 
@@ -30,20 +47,12 @@ module.exports = ( time, name ) => {
           const a = releases[ i ]
           const b = releases[ i + 1 ] || { time : moment() + 1 }
 
-          if( moment( time ).isBetween( a.time, b.time ) )
+          if( ( !target || target === 'latest' || semver.satisfies( a.version, target ) ) && moment( time ).isBetween( a.time, b.time ) )
             return ok( [ name, a.version ] )
         }
+
+        no( `Couldn't find a version of ${ name } published before ${ time } that satisfies ${ target }` )
       } )
-
-    query.catch( error => {
-      no(
-          `Couldn't get history of ${ name } from npm:\n`
-        + error
-        + `\n\n`
-      )
-    } )
-
-    return query
   } )
 
   {

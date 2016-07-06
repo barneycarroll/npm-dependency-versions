@@ -36,4 +36,3 @@ api( {
       process.stdout.write( output )
     }
   } )
-  .catch(  )
